@@ -1,13 +1,23 @@
 const Pet = require('../models/Pet');
+const messages = require('../utils/messages');
 
 exports.createPet = async (req, res) => {
-  try {
-    const pet = await Pet.create(req.body);
-    res.status(201).json(pet);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
+    try {
+      const { name, type, age, ownerId } = req.body;
+  
+      const owner = await Owner.findById(ownerId);
+      if (!owner) {
+        return res.status(404).json({ message: messages.ownerNotFound });
+      }
+  
+      const newPet = new Pet({ name, type, age, owner: ownerId });
+      await newPet.save();
+  
+      res.status(201).json({ message: messages.petCreated, data: newPet });
+    } catch (err) {
+      res.status(500).json({ message: messages.serverError });
+    }
+  };
 
 exports.getAllPets = async (req, res) => {
   try {
@@ -19,13 +29,19 @@ exports.getAllPets = async (req, res) => {
 };
 
 exports.getPetById = async (req, res) => {
-  try {
-    const pet = await Pet.findById(req.params.id).populate('owner');
-    if (!pet) return res.status(404).json({ message: "Pet not found" });
-    res.json(pet);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+    try {
+        const pet = await Pet.findById(req.params.id)
+          .select('-__v') // Exclude version field
+          .populate('owner', '-__v'); // Populate owner details, excluding __v
+    
+        if (!pet) {
+          return res.status(404).json({ message: messages.petNotFound });
+        }
+    
+        res.json(pet);
+      } catch (err) {
+        res.status(500).json({ message: messages.serverError });
+      }
 };
 
 exports.updatePet = async (req, res) => {
