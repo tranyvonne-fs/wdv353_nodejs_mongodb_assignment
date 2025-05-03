@@ -19,14 +19,38 @@ exports.createPet = async (req, res) => {
     }
   };
 
-exports.getAllPets = async (req, res) => {
-  try {
-    const pets = await Pet.find().populate('owner');
-    res.json(pets);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+  exports.getAllPets = async (req, res) => {
+    try {
+      const {
+        species,
+        vaccinated,
+        ageMax,
+        select,
+        page = 1,
+        limit = 10,
+        sortBy = 'name'
+      } = req.query;
+  
+      const query = {};
+  
+      if (species) query.species = species;
+      if (vaccinated !== undefined) query.vaccinated = vaccinated === 'true';
+      if (ageMax) query.age = { $lte: ageMax };
+  
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+  
+      const pets = await Pet.find(query)
+        .populate('owner', 'name') // optional: show owner name
+        .select(select?.split(',').join(' ') || '')
+        .sort({ [sortBy]: 1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+  
+      res.json(pets);
+    } catch (err) {
+      res.status(500).json({ message: 'Server error' });
+    }
+  };
 
 exports.getPetById = async (req, res) => {
     try {
