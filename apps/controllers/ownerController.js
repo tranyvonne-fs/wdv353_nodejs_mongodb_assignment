@@ -10,38 +10,27 @@ exports.createOwner = async (req, res) => {
 };
 
 exports.getAllOwners = async (req, res) => {
-    try {
-      const {
-        isActive, // filter by boolean
-        name,     // partial text match (optional)
-        select,   // comma-separated fields like "name,email"
-        page = 1,
-        limit = 10,
-        sortBy = 'createdAt'
-      } = req.query;
-  
-      const query = {};
-  
-      if (isActive !== undefined) {
-        query.isActive = isActive === 'true'; // converts string to boolean
-      }
-  
-      if (name) {
-        query.name = new RegExp(name, 'i'); // case-insensitive partial match
-      }
-  
-      const skip = (parseInt(page) - 1) * parseInt(limit);
-  
-      const owners = await Owner.find(query)
-        .select(select?.split(',').join(' ') || '')
-        .sort({ [sortBy]: 1 })
-        .skip(skip)
-        .limit(parseInt(limit));
-  
-      res.json(owners);
-    } catch (err) {
-      res.status(500).json({ message: 'Server error' });
+  try {
+    let query = Owner.find();
+
+    if (req.query.select) {
+      query = query.select(req.query.select);
     }
+    if (req.query.sort) {
+      query = query.sort(req.query.sort);
+    }
+    if (req.query.skip || req.query.limit) {
+      const skip = parseInt(req.query.skip) || 0;
+      const limit = parseInt(req.query.limit) || 10;
+      query = query.skip(skip).limit(limit);
+    }
+
+    const owner = await query;
+    res.status(200).json(owner);
+  } catch (err) {
+    console.error('🐛 getOwner ERROR:', err.message);
+    res.status(500).json({ message: err.message });
+  }
   };
 
 exports.getOwnerById = async (req, res) => {

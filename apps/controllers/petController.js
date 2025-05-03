@@ -21,34 +21,25 @@ exports.createPet = async (req, res) => {
 
   exports.getAllPets = async (req, res) => {
     try {
-      const {
-        species,
-        vaccinated,
-        ageMax,
-        select,
-        page = 1,
-        limit = 10,
-        sortBy = 'name'
-      } = req.query;
+      let query = Pet.find();
   
-      const query = {};
+      if (req.query.select) {
+        query = query.select(req.query.select);
+      }
+      if (req.query.sort) {
+        query = query.sort(req.query.sort);
+      }
+      if (req.query.skip || req.query.limit) {
+        const skip = parseInt(req.query.skip) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+        query = query.skip(skip).limit(limit);
+      }
   
-      if (species) query.species = species;
-      if (vaccinated !== undefined) query.vaccinated = vaccinated === 'true';
-      if (ageMax) query.age = { $lte: ageMax };
-  
-      const skip = (parseInt(page) - 1) * parseInt(limit);
-  
-      const pets = await Pet.find(query)
-        .populate('owner', 'name') // optional: show owner name
-        .select(select?.split(',').join(' ') || '')
-        .sort({ [sortBy]: 1 })
-        .skip(skip)
-        .limit(parseInt(limit));
-  
-      res.json(pets);
+      const pets = await query;
+      res.status(200).json(pets);
     } catch (err) {
-      res.status(500).json({ message: 'Server error' });
+      console.error('🐛 getPets ERROR:', err.message);
+      res.status(500).json({ message: err.message });
     }
   };
 
